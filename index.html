@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#131722">
+<title>برنامج التداول</title>
+<style>
+:root{--bg:#131722;--panel:#1e222d;--line:#2a2e39;--txt:#d1d4dc;--mute:#787b86;--up:#26a69a;--dn:#ef5350;--warn:#f0b90b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+select,button{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.price{direction:ltr;font-weight:700;font-size:18px;margin-inline-start:auto}
+.chg{direction:ltr;font-size:13px}
+.card{margin:10px 12px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.sig{font-size:22px;font-weight:800}
+.sig.up{color:var(--up)}.sig.dn{color:var(--dn)}.sig.wait{color:var(--warn)}
+.why{font-size:14px;color:var(--mute);margin-top:4px;line-height:1.7}
+.conds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.cond{background:#171b26;border-radius:8px;padding:8px;font-size:12.5px;text-align:center}
+.cond b{display:block;font-size:14px;margin-top:2px;direction:ltr}
+.ok{color:var(--up)}.no{color:var(--mute)}
+.stale{display:none;background:#3a1d1d;color:#ff8a80;border-color:#5a2a2a;font-weight:700;text-align:center}
+.stopped .sig{color:var(--mute)!important}
+#wrap{position:relative;margin:0 6px}
+canvas{display:block;width:100%}
+footer{font-size:12px;color:var(--mute);padding:8px 12px 18px;line-height:1.8}
+#kill.on{background:#5a2a2a;border-color:#ef5350;color:#fff}
+</style></head><body>
+<header>
+  <select id="sym"></select>
+  <select id="tf"><option value="1m">دقيقة</option><option value="5m" selected>5 دقائق</option><option value="15m">15 دقيقة</option><option value="1h">ساعة</option></select>
+  <span class="price" id="px">—</span><span class="chg" id="chg"></span>
+</header>
+<div class="card stale" id="stale">الأسعار قديمة، لا تعتمد عليها</div>
+<div class="card" id="sigcard">
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="sig wait" id="sig">جاري التحميل…</div>
+    <button id="kill" style="margin-inline-start:auto">إيقاف الإشارات</button>
+  </div>
+  <div class="why" id="why"></div>
+  <div class="conds">
+    <div class="cond" id="c1">كسر الهيكل<b>—</b></div>
+    <div class="cond" id="c2">الفوليوم<b>—</b></div>
+    <div class="cond" id="c3">RSI<b>—</b></div>
+  </div>
+</div>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<footer id="foot"></footer>
+<script>
+const SYMS=[["BTCUSDT","بيتكوين BTC/USDT",0],["ETHUSDT","إيثريوم ETH/USDT",1],["PAXGUSDT","ذهب مرمّز PAXG (مؤقت)",1]];
+const API="https://data-api.binance.vision/api/v3/klines", WS="wss://data-stream.binance.vision/ws/";
+const $=id=>document.getElementById(id);
+SYMS.forEach(s=>{const o=document.createElement('option');o.value=s[0];o.textContent=s[1];$('sym').appendChild(o)});
+let D=[],sym=SYMS[0][0],tf='5m',dec=0,ws=null,lastMsg=0,stopped=false;
+try{stopped=localStorage.getItem('kill')==='1'}catch(e){}
+function setKill(){$('kill').classList.toggle('on',stopped);$('kill').textContent=stopped?'الإشارات موقوفة · تشغيل':'إيقاف الإشارات';$('sigcard').classList.toggle('stopped',stopped)}
+$('kill').onclick=()=>{stopped=!stopped;try{localStorage.setItem('kill',stopped?'1':'0')}catch(e){}setKill();render()};setKill();
+const fmt=x=>x==null?'—':x.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const kt=t=>new Date(t+3*3600e3).toISOString().slice(11,16);
+
+async function load(){
+  if(ws){ws.onclose=null;ws.close()}
+  const s=SYMS.find(x=>x[0]===sym);dec=s[2]?(sym==='ETHUSDT'?2:2):0;
+  $('sig').textContent='جاري التحميل…';
+  try{
+    const r=await fetch(`${API}?symbol=${sym}&interval=${tf}&limit=150`).then(r=>r.json());
+    D=r.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));lastMsg=Date.now();
+  }catch(e){$('sig').textContent='تعذّر جلب الأسعار';return}
+  render();
+  ws=new WebSocket(WS+sym.toLowerCase()+'@kline_'+tf);
+  ws.onmessage=ev=>{const k=JSON.parse(ev.data).k;lastMsg=Date.now();const c={t:k.t,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v};
+    if(D.length&&D[D.length-1].t===c.t)D[D.length-1]=c;else{D.push(c);if(D.length>200)D.shift()}render()};
+  ws.onclose=()=>setTimeout(load,3000);
+}
+$('sym').onchange=e=>{sym=e.target.value;load()};$('tf').onchange=e=>{tf=e.target.value;load()};
+setInterval(()=>{const st=Date.now()-lastMsg>90e3;$('stale').style.display=st?'block':'none';if(st)render()},5e3);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastMsg>30e3)load()});
+window.addEventListener('resize',()=>render());
+
+function analyze(){
+  const N=D.length,R=Array(N).fill(null);let ag=0,al=0;
+  for(let i=1;i<N;i++){const d=D[i].c-D[i-1].c,g=Math.max(d,0),l=Math.max(-d,0);if(i<=14){ag+=g/14;al+=l/14;if(i===14)R[i]=100-100/(1+ag/(al||1e-9))}else{ag=(ag*13+g)/14;al=(al*13+l)/14;R[i]=100-100/(1+ag/(al||1e-9))}}
+  const vma=D.map((d,i)=>i<20?null:D.slice(i-20,i).reduce((s,x)=>s+x.v,0)/20);
+  const K=3,sh=[],sl=[];
+  for(let i=K;i<N-K;i++){let H=1,L=1;for(let j=i-K;j<=i+K;j++){if(j===i)continue;if(D[j].h>=D[i].h)H=0;if(D[j].l<=D[i].l)L=0}if(H)sh.push(i);if(L)sl.push(i)}
+  const br=[],obs=[];let trend=0;const uH=new Set,uL=new Set;
+  for(let i=0;i<N;i++){const hs=sh.filter(s=>s+K<=i),ls=sl.filter(s=>s+K<=i),h=hs[hs.length-1],l=ls[ls.length-1];
+    if(h!=null&&!uH.has(h)&&D[i].c>D[h].h){br.push({from:h,to:i,lvl:D[h].h,dir:1,type:trend===-1?'CHoCH':'BOS'});uH.add(h);trend=1;for(let j=i;j>=(l??i-10);j--)if(D[j].c<D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:1});break}}
+    if(l!=null&&!uL.has(l)&&D[i].c<D[l].l){br.push({from:l,to:i,lvl:D[l].l,dir:-1,type:trend===1?'CHoCH':'BOS'});uL.add(l);trend=-1;for(let j=i;j>=(h??i-10);j--)if(D[j].c>D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:-1});break}}}
+  const ob=obs.map(o=>{let end=null;for(let j=o.i+2;j<N;j++){if(o.dir===1&&D[j].c<o.bot||o.dir===-1&&D[j].c>o.top){end=j;break}}return{...o,end}}).filter(o=>o.end==null).slice(-3);
+  const atr=D.slice(1).reduce((s,d,i)=>s+Math.max(d.h-d.l,Math.abs(d.h-D[i].c),Math.abs(d.l-D[i].c)),0)/(N-1);
+  let fvg=[];for(let i=2;i<N;i++){if(D[i].l>D[i-2].h&&D[i].l-D[i-2].h>atr*.25)fvg.push({i:i-1,top:D[i].l,bot:D[i-2].h,dir:1});if(D[i].h<D[i-2].l&&D[i-2].l-D[i].h>atr*.25)fvg.push({i:i-1,top:D[i-2].l,bot:D[i].h,dir:-1})}
+  fvg=fvg.filter(f=>!D.slice(f.i+2).some(d=>f.dir===1?d.l<=f.bot:d.h>=f.top)).slice(-2);
+  const lastH=sh.filter(s=>s+K<=N-1).pop(),lastL=sl.filter(s=>s+K<=N-1).pop();
+  return{R,vma,sh,sl,br,ob,fvg,trend,lastH,lastL}
+}
+
+function render(){
+  if(!D.length)return;const A=analyze(),N=D.length,L=D[N-1],P=D[N-2]||L,stale=Date.now()-lastMsg>90e3;
+  $('px').textContent=fmt(L.c);const ch=L.c-D[0].o;$('chg').textContent=(ch>=0?'+':'')+(ch/D[0].o*100).toFixed(2)+'%';$('chg').style.color=ch>=0?'var(--up)':'var(--dn)';$('px').style.color=L.c>=L.o?'var(--up)':'var(--dn)';
+  // signal on last CLOSED candle
+  const i=N-2,c=D[i],r=A.R[i],vm=A.vma[i],vr=vm?c.v/vm:0;
+  const hi=A.lastH!=null?D[A.lastH].h:null,lo=A.lastL!=null?D[A.lastL].l:null;
+  const bDn=lo!=null&&c.c<lo,bUp=hi!=null&&c.c>hi,vOk=vr>1.5;
+  let sig='انتظر',cls='wait',why='';
+  if(stopped){sig='الإشارات موقوفة';why='اضغط «تشغيل» لترجع الإشارات.'}
+  else if(stale){sig='انتظر';why='الأسعار قديمة، فلا إشارة.'}
+  else if(bDn&&vOk&&r<50){sig='تأكد نزول';cls='dn';why=`سكّرت الشمعة تحت ${fmt(lo)} بفوليوم ${vr.toFixed(1)}× وRSI ${r.toFixed(0)}. يبطل إذا طلع فوق ${fmt(hi)}.`}
+  else if(bUp&&vOk&&r>50){sig='تأكد صعود';cls='up';why=`سكّرت الشمعة فوق ${fmt(hi)} بفوليوم ${vr.toFixed(1)}× وRSI ${r.toFixed(0)}. يبطل إذا نزل تحت ${fmt(lo)}.`}
+  else{const tr=A.trend===1?'الاتجاه صاعد':A.trend===-1?'الاتجاه نازل':'بدون اتجاه واضح';why=`${tr}. النزول يتأكد تحت ${fmt(lo)} والصعود فوق ${fmt(hi)}، مع فوليوم أكبر من 1.5× وRSI بنفس الاتجاه.`}
+  $('sig').textContent=sig;$('sig').className='sig '+cls;$('why').textContent=why;
+  const setC=(id,ok,val,lab)=>{$(id).innerHTML=`${lab}<b class="${ok?'ok':'no'}">${val}</b>`};
+  setC('c1',bDn||bUp,bDn?'تحت القاع':bUp?'فوق القمة':'لا كسر','كسر الهيكل');
+  setC('c2',vOk,vr?vr.toFixed(1)+'×':'—','الفوليوم');
+  setC('c3',bDn?r<50:bUp?r>50:false,r?r.toFixed(0):'—','RSI');
+  $('foot').innerHTML=`المصدر: Binance · آخر سعر ${kt(Date.now()-(Date.now()-lastMsg))} بتوقيت الكويت · شموع ${$('tf').selectedOptions[0].text}<br>نسبة احتمال لا ضمان، والقرار لك.`;
+  draw(A);
+}
+
+function draw(A){
+  const cv=$('cv'),W=cv.parentElement.clientWidth,H=Math.round(Math.min(window.innerHeight*0.62,W*1.25)),dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  const show=Math.min(D.length,W<500?70:130),off=D.length-show,S=D.slice(off),N=S.length;
+  const AX=58,X1=W-AX,P1={y0:4,y1:H*0.66},P2={y0:H*0.68,y1:H*0.81},P3={y0:H*0.83,y1:H-16};
+  const step=X1/(N+4),bw=Math.max(2,step*.7),xi=i=>step*(i-off+.5);
+  let lo=Math.min(...S.map(d=>d.l)),hi=Math.max(...S.map(d=>d.h));const pr=(hi-lo)*.06;lo-=pr;hi+=pr;
+  const yp=p=>P1.y0+(hi-p)/(hi-lo)*(P1.y1-P1.y0);
+  g.fillStyle='#131722';g.fillRect(0,0,W,H);g.font='11px -apple-system,sans-serif';g.textBaseline='middle';
+  const nice=r=>{const e=10**Math.floor(Math.log10(r));for(const m of[1,2,2.5,5,10])if(m*e>=r)return m*e};const tk=nice((hi-lo)/6);
+  for(let p=Math.ceil(lo/tk)*tk;p<hi;p+=tk){const y=Math.round(yp(p))+.5;g.strokeStyle='#1f2430';g.beginPath();g.moveTo(0,y);g.lineTo(X1,y);g.stroke();g.fillStyle='#787b86';g.textAlign='left';g.fillText(fmt(p),X1+4,y)}
+  g.strokeStyle='#2a2e39';[P2.y0-3,P3.y0-3].forEach(y=>{g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke()});
+  const box=(i0,top,bot,f,s,lab,lc)=>{if(i0<off)i0=off;const x0=xi(i0)-bw/2,y0=yp(top),y1=yp(bot);g.fillStyle=f;g.fillRect(x0,y0,X1-x0,y1-y0);if(s){g.strokeStyle=s;g.strokeRect(x0+.5,y0+.5,X1-x0-1,y1-y0-1)}g.fillStyle=lc;g.textAlign='right';g.font='600 10px -apple-system,sans-serif';g.fillText(lab,X1-4,(y0+y1)/2)};
+  A.fvg.forEach(f=>box(f.i,f.top,f.bot,f.dir===1?'rgba(38,166,154,.13)':'rgba(239,83,80,.13)',null,'FVG',f.dir===1?'#4db6ac':'#ef9a9a'));
+  A.ob.forEach(o=>box(o.i,o.top,o.bot,o.dir===1?'rgba(41,98,255,.2)':'rgba(255,152,0,.2)',o.dir===1?'rgba(41,98,255,.7)':'rgba(255,152,0,.7)',o.dir===1?'Bull OB':'Bear OB',o.dir===1?'#82a7ff':'#ffb74d'));
+  [[A.lastH,'h','BSL'],[A.lastL,'l','SSL']].forEach(([i,k,lab])=>{if(i==null||i<off)return;const y=Math.round(yp(D[i][k]))+.5;g.setLineDash([2,3]);g.strokeStyle='#e0a84f';g.beginPath();g.moveTo(xi(i),y);g.lineTo(X1,y);g.stroke();g.setLineDash([]);g.fillStyle='#e0a84f';g.textAlign='right';g.textBaseline=k==='h'?'bottom':'top';g.fillText('$$$ '+lab,X1-4,y+(k==='h'?-2:2));g.textBaseline='middle'});
+  for(let i=off;i<D.length;i++){const d=D[i],up=d.c>=d.o,c=up?'#26a69a':'#ef5350',x=Math.round(xi(i))+.5;g.strokeStyle=c;g.beginPath();g.moveTo(x,yp(d.h));g.lineTo(x,yp(d.l));g.stroke();const y0=yp(Math.max(d.o,d.c)),y1=yp(Math.min(d.o,d.c));g.fillStyle=c;g.fillRect(x-bw/2,y0,bw,Math.max(1,y1-y0))}
+  A.br.filter(b=>b.from>=off).slice(-5).forEach(b=>{const y=Math.round(yp(b.lvl))+.5,c=b.dir===1?'#26a69a':'#ef5350';g.strokeStyle=c;g.setLineDash(b.type==='CHoCH'?[4,3]:[]);g.beginPath();g.moveTo(xi(b.from),y);g.lineTo(xi(b.to),y);g.stroke();g.setLineDash([]);const mx=(xi(b.from)+xi(b.to))/2;g.font='700 9.5px -apple-system,sans-serif';const tw=g.measureText(b.type).width+8,ty=b.dir===1?y-9:y+9;g.fillStyle=c;g.fillRect(mx-tw/2,ty-7,tw,14);g.fillStyle='#fff';g.textAlign='center';g.fillText(b.type,mx,ty)});
+  const L=D[D.length-1],ly=yp(L.c),lc=L.c>=L.o?'#26a69a':'#ef5350';g.setLineDash([1,2]);g.strokeStyle=lc;g.beginPath();g.moveTo(0,ly);g.lineTo(X1,ly);g.stroke();g.setLineDash([]);g.fillStyle=lc;g.fillRect(X1,ly-9,AX,18);g.fillStyle='#fff';g.textAlign='left';g.font='600 11px -apple-system,sans-serif';g.fillText(fmt(L.c),X1+4,ly);
+  const vmax=Math.max(...S.map(d=>d.v)),yv=v=>P2.y1-v/vmax*(P2.y1-P2.y0-12);
+  for(let i=off;i<D.length;i++){const d=D[i],hot=A.vma[i]&&d.v>A.vma[i]*1.5;g.fillStyle=d.c>=d.o?(hot?'#26a69a':'rgba(38,166,154,.4)'):(hot?'#ef5350':'rgba(239,83,80,.4)');g.fillRect(xi(i)-bw/2,yv(d.v),bw,P2.y1-yv(d.v))}
+  g.strokeStyle='#f0b90b';g.beginPath();let st=0;for(let i=off;i<D.length;i++){const v=A.vma[i];if(v==null)continue;st?g.lineTo(xi(i),yv(v)):g.moveTo(xi(i),yv(v));st=1}g.stroke();
+  g.fillStyle='#d1d4dc';g.textAlign='left';g.font='11px -apple-system,sans-serif';g.textBaseline='top';g.fillText('Volume · MA20',4,P2.y0);
+  const yr=r=>P3.y0+(100-r)/100*(P3.y1-P3.y0);g.fillStyle='rgba(126,87,194,.08)';g.fillRect(0,yr(70),X1,yr(30)-yr(70));
+  g.textBaseline='middle';[70,30].forEach(l=>{g.setLineDash([3,3]);g.strokeStyle='#4a4e5a';g.beginPath();g.moveTo(0,yr(l));g.lineTo(X1,yr(l));g.stroke();g.setLineDash([]);g.fillStyle='#787b86';g.fillText(l,X1+4,yr(l))});
+  g.strokeStyle='#7e57c2';g.lineWidth=1.5;g.beginPath();st=0;for(let i=off;i<D.length;i++){const r=A.R[i];if(r==null)continue;st?g.lineTo(xi(i),yr(r)):g.moveTo(xi(i),yr(r));st=1}g.stroke();g.lineWidth=1;
+  g.fillStyle='#d1d4dc';g.textBaseline='top';g.fillText('RSI 14 · '+(A.R[D.length-1]||0).toFixed(1),4,P3.y0);
+  g.fillStyle='#787b86';g.textAlign='center';g.textBaseline='bottom';for(let i=off;i<D.length;i+=Math.ceil(N/5))g.fillText(kt(D[i].t),xi(i),H-1);
+}
+load();
+</script></body></html>
