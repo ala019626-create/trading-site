@@ -2,37 +2,74 @@
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="التداول">
 <meta name="theme-color" content="#131722">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <title>برنامج التداول</title>
 <style>
-:root{--bg:#131722;--panel:#1e222d;--line:#2a2e39;--txt:#d1d4dc;--mute:#787b86;--up:#26a69a;--dn:#ef5350;--warn:#f0b90b}
+:root{--bg:#131722;--panel:#1e222d;--panel2:#171b26;--line:#2a2e39;--txt:#d1d4dc;--mute:#8a8d98;--up:#26a69a;--dn:#ef5350;--warn:#f0b90b;--acc:#2962ff}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif}
-body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 0 calc(64px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-select,button{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
-.price{direction:ltr;font-weight:700;font-size:18px;margin-inline-start:auto}
+select,button{font:inherit;font-size:15px;color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+button{cursor:pointer}
+#sym{max-width:46vw}
+.price{direction:ltr;font-weight:700;font-size:18px}
 .chg{direction:ltr;font-size:13px}
+.pxw{margin-inline-start:auto;display:flex;align-items:baseline;gap:6px;white-space:nowrap}
 .card{margin:10px 12px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.card h2{font-size:15px;margin-bottom:8px}
 .sig{font-size:22px;font-weight:800}
-.sig.up{color:var(--up)}.sig.dn{color:var(--dn)}.sig.wait{color:var(--warn)}
+.sig.up{color:var(--up)}.sig.dn{color:var(--dn)}.sig.wait{color:var(--warn)}.sig.off{color:var(--mute)}
 .why{font-size:14px;color:var(--mute);margin-top:4px;line-height:1.7}
+.block{margin-top:8px;padding:8px 10px;border-radius:8px;background:#2b2412;color:#ffd166;font-size:14px;line-height:1.6;display:none}
 .conds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
-.cond{background:#171b26;border-radius:8px;padding:8px;font-size:12.5px;text-align:center}
+.cond{background:var(--panel2);border-radius:8px;padding:8px 4px;font-size:12.5px;text-align:center}
 .cond b{display:block;font-size:14px;margin-top:2px;direction:ltr}
 .ok{color:var(--up)}.no{color:var(--mute)}
+.trade{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.trade div{background:var(--panel2);border-radius:8px;padding:8px 4px;text-align:center;font-size:12.5px}
+.trade b{display:block;direction:ltr;font-size:14px;margin-top:2px}
 .stale{display:none;background:#3a1d1d;color:#ff8a80;border-color:#5a2a2a;font-weight:700;text-align:center}
-.stopped .sig{color:var(--mute)!important}
+.daybar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 12px 0}
+.pill{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.pill.bad{background:#3a1d1d;border-color:#5a2a2a;color:#ff8a80}
+.pill.good{color:var(--up)}
 #wrap{position:relative;margin:0 6px}
 canvas{display:block;width:100%}
 footer{font-size:12px;color:var(--mute);padding:8px 12px 18px;line-height:1.8}
 #kill.on{background:#5a2a2a;border-color:#ef5350;color:#fff}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0f121a;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;border:0;border-radius:0;background:none;padding:12px 4px;font-size:15px;color:var(--mute)}
+nav button.on{color:#fff;font-weight:700;box-shadow:inset 0 3px 0 var(--acc)}
+.page{display:none}.page.on{display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats div{background:var(--panel2);border-radius:8px;padding:10px 4px;text-align:center;font-size:12.5px;color:var(--mute)}
+.stats b{display:block;font-size:18px;color:var(--txt);margin-top:3px;direction:ltr}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:start}
+th{color:var(--mute);font-weight:600}
+td.n{direction:ltr;text-align:end}
+.empty{color:var(--mute);font-size:14px;line-height:1.7}
+.big{width:100%;padding:12px;font-size:16px;font-weight:700;background:var(--acc);border-color:var(--acc);color:#fff;margin-top:8px}
+.big.sec{background:var(--panel2);border-color:var(--line);color:var(--txt)}
+.steps{font-size:14px;line-height:1.9;padding-inline-start:20px;margin-top:6px}
+.note{font-size:13px;color:var(--mute);line-height:1.7;margin-top:6px}
+.scroll{overflow-x:auto}
 </style></head><body>
+
+<section class="page on" id="p-market">
 <header>
-  <select id="sym"></select>
-  <select id="tf"><option value="1m">دقيقة</option><option value="5m" selected>5 دقائق</option><option value="15m">15 دقيقة</option><option value="1h">ساعة</option></select>
-  <span class="price" id="px">—</span><span class="chg" id="chg"></span>
+  <select id="sym" aria-label="الأداة"></select>
+  <select id="tf" aria-label="مدة الشمعة"><option value="1m">دقيقة</option><option value="5m" selected>5 دقائق</option><option value="15m">15 دقيقة</option><option value="1h">ساعة</option></select>
+  <span class="pxw"><span class="price" id="px">—</span><span class="chg" id="chg"></span></span>
 </header>
+<div class="daybar" id="day"></div>
 <div class="card stale" id="stale">الأسعار قديمة، لا تعتمد عليها</div>
 <div class="card" id="sigcard">
   <div style="display:flex;align-items:center;gap:8px">
@@ -40,45 +77,138 @@ footer{font-size:12px;color:var(--mute);padding:8px 12px 18px;line-height:1.8}
     <button id="kill" style="margin-inline-start:auto">إيقاف الإشارات</button>
   </div>
   <div class="why" id="why"></div>
+  <div class="block" id="block"></div>
   <div class="conds">
     <div class="cond" id="c1">كسر الهيكل<b>—</b></div>
     <div class="cond" id="c2">الفوليوم<b>—</b></div>
     <div class="cond" id="c3">RSI<b>—</b></div>
   </div>
+  <div class="trade" id="trade">
+    <div>الدخول<b id="t-en">—</b></div><div>الوقف<b id="t-sl">—</b></div><div>الهدف<b id="t-tp">—</b></div>
+    <div>اللوت<b id="t-lot">—</b></div><div>المخاطرة<b id="t-risk">—</b></div><div>صالحة حتى<b id="t-valid">—</b></div>
+  </div>
 </div>
 <div id="wrap"><canvas id="cv"></canvas></div>
 <footer id="foot"></footer>
-<script>
-const SYMS=[["BTCUSDT","بيتكوين BTC/USDT",0],["ETHUSDT","إيثريوم ETH/USDT",1],["PAXGUSDT","ذهب مرمّز PAXG (مؤقت)",1]];
-const API="https://data-api.binance.vision/api/v3/klines", WS="wss://data-stream.binance.vision/ws/";
-const $=id=>document.getElementById(id);
-SYMS.forEach(s=>{const o=document.createElement('option');o.value=s[0];o.textContent=s[1];$('sym').appendChild(o)});
-let D=[],sym=SYMS[0][0],tf='5m',dec=0,ws=null,lastMsg=0,stopped=false;
-try{stopped=localStorage.getItem('kill')==='1'}catch(e){}
-function setKill(){$('kill').classList.toggle('on',stopped);$('kill').textContent=stopped?'الإشارات موقوفة · تشغيل':'إيقاف الإشارات';$('sigcard').classList.toggle('stopped',stopped)}
-$('kill').onclick=()=>{stopped=!stopped;try{localStorage.setItem('kill',stopped?'1':'0')}catch(e){}setKill();render()};setKill();
-const fmt=x=>x==null?'—':x.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
-const kt=t=>new Date(t+3*3600e3).toISOString().slice(11,16);
+</section>
 
-async function load(){
-  if(ws){ws.onclose=null;ws.close()}
-  const s=SYMS.find(x=>x[0]===sym);dec=s[2]?(sym==='ETHUSDT'?2:2):0;
-  $('sig').textContent='جاري التحميل…';
-  try{
-    const r=await fetch(`${API}?symbol=${sym}&interval=${tf}&limit=150`).then(r=>r.json());
-    D=r.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));lastMsg=Date.now();
-  }catch(e){$('sig').textContent='تعذّر جلب الأسعار';return}
-  render();
-  ws=new WebSocket(WS+sym.toLowerCase()+'@kline_'+tf);
-  ws.onmessage=ev=>{const k=JSON.parse(ev.data).k;lastMsg=Date.now();const c={t:k.t,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v};
-    if(D.length&&D[D.length-1].t===c.t)D[D.length-1]=c;else{D.push(c);if(D.length>200)D.shift()}render()};
-  ws.onclose=()=>setTimeout(load,3000);
+<section class="page" id="p-results">
+  <div class="card"><h2>نتائج إشارات البرنامج</h2>
+    <div class="stats"><div>الإشارات<b id="s-total">—</b></div><div>نسبة الإصابة<b id="s-win">—</b></div><div>مجموع R<b id="s-r">—</b></div></div>
+    <p class="note">كل إشارة تُسجَّل كصفقة بلا فلوس. الربح <bdi dir="ltr">+2R</bdi>، والخسارة <bdi dir="ltr">−1R</bdi>.</p>
+  </div>
+  <div class="card"><h2>سجل الإشارات</h2><div class="scroll" id="log"><p class="empty">جاري التحميل…</p></div></div>
+  <div class="card"><h2>الاختبار على أسعار الماضي</h2><div class="scroll" id="bt"><p class="empty">جاري التحميل…</p></div></div>
+</section>
+
+<section class="page" id="p-alerts">
+  <div class="card"><h2>التنبيهات على الجوال</h2>
+    <div id="ios" style="display:none">
+      <p class="why" style="color:var(--txt)">في الآيفون لازم أول شي تضيف البرنامج للشاشة الرئيسية:</p>
+      <ol class="steps"><li>اضغط زر المشاركة <b>⬆︎</b> أسفل سفاري.</li><li>اختر «إضافة إلى الشاشة الرئيسية».</li><li>افتح البرنامج من أيقونته الجديدة، ثم ارجع هنا واضغط الزر.</li></ol>
+    </div>
+    <p class="why" id="n-state">—</p>
+    <button class="big" id="n-on">فعّل التنبيهات</button>
+    <button class="big sec" id="n-test" style="display:none">جرّب تنبيه الحين</button>
+    <p class="note">يوصلك تنبيه مع كل «تأكد صعود» أو «تأكد نزول»، فيه الدخول والوقف والهدف واللوت.</p>
+  </div>
+</section>
+
+<nav>
+  <button data-p="market" class="on">السوق</button>
+  <button data-p="results">النتائج</button>
+  <button data-p="alerts">التنبيهات</button>
+</nav>
+
+<script>
+const RELAY='https://trading-relay.ala019626.workers.dev';
+const BIN='https://data-api.binance.vision/api/v3/klines';
+const BINSYMS=[['BTCUSDT','بيتكوين BTC',2],['ETHUSDT','إيثريوم ETH',2]];
+const CATS=['فوركس','معادن','طاقة','مؤشرات','عملات رقمية','أسهم'];
+const STALE=90;
+const $=id=>document.getElementById(id);
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+let ST=null,stAt=0,LOG=null,D=[],cur=ls.get('sym')||'',tf='5m',dec=2,lastBars=0,stopped=ls.get('kill')==='1',busy=false;
+const isBin=s=>s.startsWith('bin:');
+const fmt=x=>x==null||isNaN(x)?'—':Number(x).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const kt=t=>new Date(t+3*3600e3).toISOString().slice(11,16);
+const ktd=t=>{const d=new Date(t+3*3600e3).toISOString();return d.slice(5,10).replace('-','/')+' '+d.slice(11,16)};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function getJ(u,ms=8000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw new Error(r.status);return await r.json()}finally{clearTimeout(t)}}
+
+// ---------- tabs ----------
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.p));
+  if(b.dataset.p==='results')loadResults();if(b.dataset.p==='market')render();if(b.dataset.p==='alerts')pushState();window.scrollTo(0,0)});
+
+// ---------- kill switch ----------
+function setKill(){$('kill').classList.toggle('on',stopped);$('kill').textContent=stopped?'موقوفة · تشغيل':'إيقاف الإشارات'}
+$('kill').onclick=async()=>{stopped=!stopped;ls.set('kill',stopped?'1':'0');setKill();render();
+  try{const reg=await navigator.serviceWorker?.getRegistration();const sub=await reg?.pushManager.getSubscription();
+    if(stopped&&sub){ls.set('pushWas','1');await sub.unsubscribe()}
+    else if(!stopped&&ls.get('pushWas')==='1'&&Notification.permission==='granted'){await subscribe(true)}}catch(e){}
+  pushState()};
+setKill();
+
+// ---------- symbol list ----------
+function buildSel(){
+  const sel=$('sym'),keep=cur,names=ST?Object.keys(ST.syms):[];
+  const sig=JSON.stringify(names);if(sel.dataset.sig===sig)return;sel.dataset.sig=sig;sel.innerHTML='';
+  const groups={};names.forEach(k=>{const c=ST.syms[k].cat||'أسهم';(groups[c]=groups[c]||[]).push(k)});
+  [...CATS,...Object.keys(groups).filter(c=>!CATS.includes(c))].forEach(c=>{if(!groups[c])return;const g=document.createElement('optgroup');g.label=c;
+    groups[c].sort().forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;g.appendChild(o)});sel.appendChild(g)});
+  const g=document.createElement('optgroup');g.label='احتياط: Binance';
+  BINSYMS.forEach(s=>{const o=document.createElement('option');o.value='bin:'+s[0];o.textContent=s[1];g.appendChild(o)});sel.appendChild(g);
+  const all=[...sel.options].map(o=>o.value);cur=all.includes(keep)?keep:all[0];sel.value=cur;onSym();
 }
-$('sym').onchange=e=>{sym=e.target.value;load()};$('tf').onchange=e=>{tf=e.target.value;load()};
-setInterval(()=>{const st=Date.now()-lastMsg>90e3;$('stale').style.display=st?'block':'none';if(st)render()},5e3);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastMsg>30e3)load()});
+$('sym').onchange=e=>{cur=e.target.value;ls.set('sym',cur);D=[];onSym();loadBars()};
+$('tf').onchange=e=>{tf=e.target.value;D=[];loadBars()};
+function onSym(){$('tf').style.display=isBin(cur)?'':'none'}
+
+// ---------- data ----------
+async function loadState(){try{ST=await getJ(RELAY+'/state');stAt=Date.now()}catch(e){}buildSel();renderDay()}
+async function loadSignals(){try{LOG=await getJ(RELAY+'/signals')}catch(e){}}
+async function loadBars(){
+  const s=cur;if(!s)return;
+  try{
+    if(isBin(s)){const b=BINSYMS.find(x=>'bin:'+x[0]===s);dec=b[2];
+      const r=await getJ(`${BIN}?symbol=${b[0]}&interval=${tf}&limit=150`);if(s!==cur)return;
+      D=r.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));lastBars=Date.now()}
+    else{const r=await getJ(RELAY+'/bars?sym='+encodeURIComponent(s));if(s!==cur)return;
+      dec=r.digits!=null?r.digits:(ST?.syms[s]?.digits??2);
+      D=(r.bars||[]).map(b=>({t:b[0],o:+b[1],h:+b[2],l:+b[3],c:+b[4],v:+b[5]}));lastBars=Date.now()}
+  }catch(e){}
+  render();
+}
+async function tick(){if(busy||document.hidden)return;busy=true;try{await Promise.all([loadState(),loadSignals()]);await loadBars();if($('p-results').classList.contains('on'))renderResults()}finally{busy=false}}
+setInterval(tick,5e3);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 window.addEventListener('resize',()=>render());
 
+function isStale(){
+  if(isBin(cur))return !lastBars||Date.now()-lastBars>STALE*1e3;
+  if(!ST||Date.now()-stAt>STALE*1e3)return true;
+  if(ST.feedAge==null||ST.feedAge>STALE)return true;
+  const s=ST.syms[cur];return !s||!!s.stale;
+}
+
+// ---------- day state ----------
+function renderDay(){
+  const el=$('day');if(!ST){el.innerHTML='<span class="pill bad">الخادم لا يرد</span>';return}
+  const d=ST.day||{},x=ST.experiment||{},p=[];
+  p.push(`<span class="pill">إشارات اليوم ${d.count??0}/5</span>`);
+  if(d.locked)p.push('<span class="pill bad">مقفل: حد الخسارة اليومي</span>');
+  else if(d.full)p.push('<span class="pill bad">وصلنا 5 إشارات اليوم</span>');
+  if(d.cooldownUntil>Date.now())p.push(`<span class="pill bad">انتظار حتى ${kt(d.cooldownUntil)}</span>`);
+  if(x.stopped)p.push('<span class="pill bad">التجربة متوقفة: المبلغ وصل حد التوقف</span>');
+  else if(x.ratio!=null)p.push(`<span class="pill">الحساب <bdi>${(x.ratio*100).toFixed(0)}%</bdi> من البداية</span>`);
+  if(!d.locked&&!d.full&&!x.stopped&&!(d.cooldownUntil>Date.now()))p.push('<span class="pill good">مسموح</span>');
+  el.innerHTML=p.join('');
+}
+
+// ---------- analysis (نفس منطق الخادم) ----------
 function analyze(){
   const N=D.length,R=Array(N).fill(null);let ag=0,al=0;
   for(let i=1;i<N;i++){const d=D[i].c-D[i-1].c,g=Math.max(d,0),l=Math.max(-d,0);if(i<=14){ag+=g/14;al+=l/14;if(i===14)R[i]=100-100/(1+ag/(al||1e-9))}else{ag=(ag*13+g)/14;al=(al*13+l)/14;R[i]=100-100/(1+ag/(al||1e-9))}}
@@ -86,46 +216,76 @@ function analyze(){
   const K=3,sh=[],sl=[];
   for(let i=K;i<N-K;i++){let H=1,L=1;for(let j=i-K;j<=i+K;j++){if(j===i)continue;if(D[j].h>=D[i].h)H=0;if(D[j].l<=D[i].l)L=0}if(H)sh.push(i);if(L)sl.push(i)}
   const br=[],obs=[];let trend=0;const uH=new Set,uL=new Set;
-  for(let i=0;i<N;i++){const hs=sh.filter(s=>s+K<=i),ls=sl.filter(s=>s+K<=i),h=hs[hs.length-1],l=ls[ls.length-1];
-    if(h!=null&&!uH.has(h)&&D[i].c>D[h].h){br.push({from:h,to:i,lvl:D[h].h,dir:1,type:trend===-1?'CHoCH':'BOS'});uH.add(h);trend=1;for(let j=i;j>=(l??i-10);j--)if(D[j].c<D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:1});break}}
-    if(l!=null&&!uL.has(l)&&D[i].c<D[l].l){br.push({from:l,to:i,lvl:D[l].l,dir:-1,type:trend===1?'CHoCH':'BOS'});uL.add(l);trend=-1;for(let j=i;j>=(h??i-10);j--)if(D[j].c>D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:-1});break}}}
+  for(let i=0;i<N;i++){const hs=sh.filter(s=>s+K<=i),ls_=sl.filter(s=>s+K<=i),h=hs[hs.length-1],l=ls_[ls_.length-1];
+    if(h!=null&&!uH.has(h)&&D[i].c>D[h].h){br.push({from:h,to:i,lvl:D[h].h,dir:1,type:trend===-1?'CHoCH':'BOS'});uH.add(h);trend=1;for(let j=i;j>=(l??i-10)&&j>=0;j--)if(D[j].c<D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:1});break}}
+    if(l!=null&&!uL.has(l)&&D[i].c<D[l].l){br.push({from:l,to:i,lvl:D[l].l,dir:-1,type:trend===1?'CHoCH':'BOS'});uL.add(l);trend=-1;for(let j=i;j>=(h??i-10)&&j>=0;j--)if(D[j].c>D[j].o){obs.push({i:j,top:D[j].h,bot:D[j].l,dir:-1});break}}}
   const ob=obs.map(o=>{let end=null;for(let j=o.i+2;j<N;j++){if(o.dir===1&&D[j].c<o.bot||o.dir===-1&&D[j].c>o.top){end=j;break}}return{...o,end}}).filter(o=>o.end==null).slice(-3);
-  const atr=D.slice(1).reduce((s,d,i)=>s+Math.max(d.h-d.l,Math.abs(d.h-D[i].c),Math.abs(d.l-D[i].c)),0)/(N-1);
+  const atr=N>1?D.slice(1).reduce((s,d,i)=>s+Math.max(d.h-d.l,Math.abs(d.h-D[i].c),Math.abs(d.l-D[i].c)),0)/(N-1):0;
   let fvg=[];for(let i=2;i<N;i++){if(D[i].l>D[i-2].h&&D[i].l-D[i-2].h>atr*.25)fvg.push({i:i-1,top:D[i].l,bot:D[i-2].h,dir:1});if(D[i].h<D[i-2].l&&D[i-2].l-D[i].h>atr*.25)fvg.push({i:i-1,top:D[i-2].l,bot:D[i].h,dir:-1})}
   fvg=fvg.filter(f=>!D.slice(f.i+2).some(d=>f.dir===1?d.l<=f.bot:d.h>=f.top)).slice(-2);
-  const lastH=sh.filter(s=>s+K<=N-1).pop(),lastL=sl.filter(s=>s+K<=N-1).pop();
+  const lim=N-2,lastH=sh.filter(s=>s+K<=lim-1).pop(),lastL=sl.filter(s=>s+K<=lim-1).pop();
   return{R,vma,sh,sl,br,ob,fvg,trend,lastH,lastL}
 }
 
-function render(){
-  if(!D.length)return;const A=analyze(),N=D.length,L=D[N-1],P=D[N-2]||L,stale=Date.now()-lastMsg>90e3;
-  $('px').textContent=fmt(L.c);const ch=L.c-D[0].o;$('chg').textContent=(ch>=0?'+':'')+(ch/D[0].o*100).toFixed(2)+'%';$('chg').style.color=ch>=0?'var(--up)':'var(--dn)';$('px').style.color=L.c>=L.o?'var(--up)':'var(--dn)';
-  // signal on last CLOSED candle
-  const i=N-2,c=D[i],r=A.R[i],vm=A.vma[i],vr=vm?c.v/vm:0;
-  const hi=A.lastH!=null?D[A.lastH].h:null,lo=A.lastL!=null?D[A.lastL].l:null;
-  const bDn=lo!=null&&c.c<lo,bUp=hi!=null&&c.c>hi,vOk=vr>1.5;
-  let sig='انتظر',cls='wait',why='';
-  if(stopped){sig='الإشارات موقوفة';why='اضغط «تشغيل» لترجع الإشارات.'}
-  else if(stale){sig='انتظر';why='الأسعار قديمة، فلا إشارة.'}
-  else if(bDn&&vOk&&r<50){sig='تأكد نزول';cls='dn';why=`سكّرت الشمعة تحت ${fmt(lo)} بفوليوم ${vr.toFixed(1)}× وRSI ${r.toFixed(0)}. يبطل إذا طلع فوق ${fmt(hi)}.`}
-  else if(bUp&&vOk&&r>50){sig='تأكد صعود';cls='up';why=`سكّرت الشمعة فوق ${fmt(hi)} بفوليوم ${vr.toFixed(1)}× وRSI ${r.toFixed(0)}. يبطل إذا نزل تحت ${fmt(lo)}.`}
-  else{const tr=A.trend===1?'الاتجاه صاعد':A.trend===-1?'الاتجاه نازل':'بدون اتجاه واضح';why=`${tr}. النزول يتأكد تحت ${fmt(lo)} والصعود فوق ${fmt(hi)}، مع فوليوم أكبر من 1.5× وRSI بنفس الاتجاه.`}
-  $('sig').textContent=sig;$('sig').className='sig '+cls;$('why').textContent=why;
-  const setC=(id,ok,val,lab)=>{$(id).innerHTML=`${lab}<b class="${ok?'ok':'no'}">${val}</b>`};
-  setC('c1',bDn||bUp,bDn?'تحت القاع':bUp?'فوق القمة':'لا كسر','كسر الهيكل');
-  setC('c2',vOk,vr?vr.toFixed(1)+'×':'—','الفوليوم');
-  setC('c3',bDn?r<50:bUp?r>50:false,r?r.toFixed(0):'—','RSI');
-  $('foot').innerHTML=`المصدر: Binance · آخر سعر ${kt(Date.now()-(Date.now()-lastMsg))} بتوقيت الكويت · شموع ${$('tf').selectedOptions[0].text}<br>نسبة احتمال لا ضمان، والقرار لك.`;
-  draw(A);
+// ---------- signal card ----------
+function openTrade(){
+  if(!LOG||!LOG.log||isBin(cur))return null;const now=Date.now();
+  return [...LOG.log].reverse().find(l=>l.sym===cur&&l.res==null&&(!l.validUntil||l.validUntil>now))||null;
 }
+function render(){
+  const stale=isStale();$('stale').style.display=stale?'block':'none';
+  if(!D.length){$('px').textContent='—';$('chg').textContent='';$('sig').textContent=ST||isBin(cur)?'لا توجد شموع بعد':'جاري التحميل…';$('sig').className='sig wait';$('why').textContent=ST?'':'الخادم لا يرد حالياً، جرّب بيتكوين من Binance.';$('trade').style.display='none';$('block').style.display='none';clearCv();foot();return}
+  const A=analyze(),N=D.length,L=D[N-1];
+  $('px').textContent=fmt(L.c);const ch=L.c-D[0].o;$('chg').textContent=(ch>=0?'+':'')+(ch/D[0].o*100).toFixed(2)+'%';$('chg').style.color=ch>=0?'var(--up)':'var(--dn)';$('px').style.color=L.c>=L.o?'var(--up)':'var(--dn)';
+  const srv=!isBin(cur)&&ST&&ST.syms[cur]&&ST.syms[cur].sig;
+  const i=N-2,c=D[Math.max(i,0)];
+  let hi,lo,vr,r,dir,trend,reason=null;
+  if(srv){({hi,lo,vr,rsi:r,dir,trend,reason}=srv)}
+  else{r=A.R[i];const vm=A.vma[i];vr=vm?c.v/vm:0;hi=A.lastH!=null?D[A.lastH].h:null;lo=A.lastL!=null?D[A.lastL].l:null;trend=A.trend;
+    dir=lo!=null&&c.c<lo&&vr>1.5&&r<50?-1:hi!=null&&c.c>hi&&vr>1.5&&r>50?1:0}
+  const bDn=lo!=null&&(dir===-1||c.c<lo),bUp=hi!=null&&(dir===1||c.c>hi),vOk=vr>1.5;
+  let sig='انتظر',cls='wait',why='',blk='';
+  const ds=ST&&ST.day,ex=ST&&ST.experiment;
+  if(stopped){sig='الإشارات موقوفة';cls='off';why='اضغط «تشغيل» لترجع الإشارات والتنبيهات.'}
+  else if(stale){sig='انتظر';why='الأسعار قديمة، فلا إشارة.'}
+  else if(dir===-1){sig='تأكد نزول';cls='dn';why=`سكّرت الشمعة تحت ${fmt(lo)} بفوليوم ${(+vr).toFixed(1)}× وRSI ${(+r).toFixed(0)}.`}
+  else if(dir===1){sig='تأكد صعود';cls='up';why=`سكّرت الشمعة فوق ${fmt(hi)} بفوليوم ${(+vr).toFixed(1)}× وRSI ${(+r).toFixed(0)}.`}
+  else{const tr=trend===1?'الاتجاه صاعد':trend===-1?'الاتجاه نازل':'بدون اتجاه واضح';why=`${tr}. النزول يتأكد تحت ${fmt(lo)} والصعود فوق ${fmt(hi)}، مع فوليوم أكبر من 1.5× وRSI بنفس الاتجاه.`}
+  if(!stopped&&!stale){
+    if(dir&&reason)blk='الإشارة ممنوعة: '+reason;
+    else if(dir&&isBin(cur))blk='للمتابعة فقط: Binance احتياط، والإشارات الرسمية من أسعار أكسنس.';
+    else if(ex&&ex.stopped)blk='التجربة متوقفة: المبلغ وصل حد التوقف.';
+    else if(ds&&ds.locked)blk='مقفل اليوم: وصلنا حد الخسارة اليومي.';
+    else if(ds&&ds.full)blk='وصلنا 5 إشارات اليوم.';
+  }
+  if(blk&&dir){cls='off'}
+  $('sig').textContent=sig;$('sig').className='sig '+cls;$('why').textContent=why;
+  $('block').textContent=blk;$('block').style.display=blk?'block':'none';
+  const setC=(id,ok,val,lab)=>{$(id).innerHTML=`${lab}<b class="${ok?'ok':'no'}">${val}</b>`};
+  const live=!stopped&&!stale;
+  setC('c1',live&&(bDn||bUp),bDn?'تحت القاع':bUp?'فوق القمة':'لا كسر','كسر الهيكل');
+  setC('c2',live&&vOk,vr?(+vr).toFixed(1)+'×':'—','الفوليوم');
+  setC('c3',live&&(bDn?r<50:bUp?r>50:false),r!=null?(+r).toFixed(0):'—','RSI');
+  const t=(!stopped&&!stale)?openTrade():null;
+  $('trade').style.display=t?'grid':'none';
+  if(t){$('t-en').textContent=fmt(t.entry);$('t-sl').textContent=fmt(t.sl);$('t-tp').textContent=fmt(t.tp);$('t-lot').textContent=t.lot??'—';
+    $('t-risk').textContent=t.riskPct!=null?(t.riskPct*100).toFixed(1)+'%':'—';$('t-valid').textContent=t.validUntil?kt(t.validUntil):'—';
+    if(!dir){$('sig').textContent=t.dir===1?'صفقة صعود مفتوحة':'صفقة نزول مفتوحة';$('sig').className='sig '+(t.dir===1?'up':'dn')}}
+  foot();draw(A);
+}
+function foot(){
+  const src=isBin(cur)?'Binance (احتياط)':'أكسنس عبر الخادم',t=isBin(cur)?lastBars:(ST&&ST.feedAge!=null?Date.now()-ST.feedAge*1e3:0);
+  $('foot').innerHTML=`المصدر: ${src} · آخر سعر ${t?kt(t):'—'} بتوقيت الكويت${isBin(cur)?' · شموع '+$('tf').selectedOptions[0].text:''}<br>نسبة احتمال لا ضمان، والقرار لك.`;
+}
+function clearCv(){const cv=$('cv');cv.height=0;cv.style.height='0'}
 
 function draw(A){
-  const cv=$('cv'),W=cv.parentElement.clientWidth,H=Math.round(Math.min(window.innerHeight*0.62,W*1.25)),dpr=window.devicePixelRatio||1;
+  const cv=$('cv'),W=cv.parentElement.clientWidth;if(!W)return;const H=Math.round(Math.min(window.innerHeight*0.62,W*1.25)),dpr=window.devicePixelRatio||1;
   cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
   const show=Math.min(D.length,W<500?70:130),off=D.length-show,S=D.slice(off),N=S.length;
-  const AX=58,X1=W-AX,P1={y0:4,y1:H*0.66},P2={y0:H*0.68,y1:H*0.81},P3={y0:H*0.83,y1:H-16};
+  const AX=62,X1=W-AX,P1={y0:4,y1:H*0.66},P2={y0:H*0.68,y1:H*0.81},P3={y0:H*0.83,y1:H-16};
   const step=X1/(N+4),bw=Math.max(2,step*.7),xi=i=>step*(i-off+.5);
-  let lo=Math.min(...S.map(d=>d.l)),hi=Math.max(...S.map(d=>d.h));const pr=(hi-lo)*.06;lo-=pr;hi+=pr;
+  let lo=Math.min(...S.map(d=>d.l)),hi=Math.max(...S.map(d=>d.h));const pr=(hi-lo)*.06||Math.abs(hi)*.001||1;lo-=pr;hi+=pr;
   const yp=p=>P1.y0+(hi-p)/(hi-lo)*(P1.y1-P1.y0);
   g.fillStyle='#131722';g.fillRect(0,0,W,H);g.font='11px -apple-system,sans-serif';g.textBaseline='middle';
   const nice=r=>{const e=10**Math.floor(Math.log10(r));for(const m of[1,2,2.5,5,10])if(m*e>=r)return m*e};const tk=nice((hi-lo)/6);
@@ -137,8 +297,9 @@ function draw(A){
   [[A.lastH,'h','BSL'],[A.lastL,'l','SSL']].forEach(([i,k,lab])=>{if(i==null||i<off)return;const y=Math.round(yp(D[i][k]))+.5;g.setLineDash([2,3]);g.strokeStyle='#e0a84f';g.beginPath();g.moveTo(xi(i),y);g.lineTo(X1,y);g.stroke();g.setLineDash([]);g.fillStyle='#e0a84f';g.textAlign='right';g.textBaseline=k==='h'?'bottom':'top';g.fillText('$$$ '+lab,X1-4,y+(k==='h'?-2:2));g.textBaseline='middle'});
   for(let i=off;i<D.length;i++){const d=D[i],up=d.c>=d.o,c=up?'#26a69a':'#ef5350',x=Math.round(xi(i))+.5;g.strokeStyle=c;g.beginPath();g.moveTo(x,yp(d.h));g.lineTo(x,yp(d.l));g.stroke();const y0=yp(Math.max(d.o,d.c)),y1=yp(Math.min(d.o,d.c));g.fillStyle=c;g.fillRect(x-bw/2,y0,bw,Math.max(1,y1-y0))}
   A.br.filter(b=>b.from>=off).slice(-5).forEach(b=>{const y=Math.round(yp(b.lvl))+.5,c=b.dir===1?'#26a69a':'#ef5350';g.strokeStyle=c;g.setLineDash(b.type==='CHoCH'?[4,3]:[]);g.beginPath();g.moveTo(xi(b.from),y);g.lineTo(xi(b.to),y);g.stroke();g.setLineDash([]);const mx=(xi(b.from)+xi(b.to))/2;g.font='700 9.5px -apple-system,sans-serif';const tw=g.measureText(b.type).width+8,ty=b.dir===1?y-9:y+9;g.fillStyle=c;g.fillRect(mx-tw/2,ty-7,tw,14);g.fillStyle='#fff';g.textAlign='center';g.fillText(b.type,mx,ty)});
+  const t=(!stopped&&!isStale())?openTrade():null;if(t)[[t.entry,'#d1d4dc','دخول'],[t.sl,'#ef5350','وقف'],[t.tp,'#26a69a','هدف']].forEach(([p,c,lab])=>{if(p<lo||p>hi)return;const y=Math.round(yp(p))+.5;g.setLineDash([6,3]);g.strokeStyle=c;g.beginPath();g.moveTo(0,y);g.lineTo(X1,y);g.stroke();g.setLineDash([]);g.fillStyle=c;g.textAlign='left';g.font='600 10px -apple-system,sans-serif';g.fillText(lab,4,y-7)});
   const L=D[D.length-1],ly=yp(L.c),lc=L.c>=L.o?'#26a69a':'#ef5350';g.setLineDash([1,2]);g.strokeStyle=lc;g.beginPath();g.moveTo(0,ly);g.lineTo(X1,ly);g.stroke();g.setLineDash([]);g.fillStyle=lc;g.fillRect(X1,ly-9,AX,18);g.fillStyle='#fff';g.textAlign='left';g.font='600 11px -apple-system,sans-serif';g.fillText(fmt(L.c),X1+4,ly);
-  const vmax=Math.max(...S.map(d=>d.v)),yv=v=>P2.y1-v/vmax*(P2.y1-P2.y0-12);
+  const vmax=Math.max(...S.map(d=>d.v))||1,yv=v=>P2.y1-v/vmax*(P2.y1-P2.y0-12);
   for(let i=off;i<D.length;i++){const d=D[i],hot=A.vma[i]&&d.v>A.vma[i]*1.5;g.fillStyle=d.c>=d.o?(hot?'#26a69a':'rgba(38,166,154,.4)'):(hot?'#ef5350':'rgba(239,83,80,.4)');g.fillRect(xi(i)-bw/2,yv(d.v),bw,P2.y1-yv(d.v))}
   g.strokeStyle='#f0b90b';g.beginPath();let st=0;for(let i=off;i<D.length;i++){const v=A.vma[i];if(v==null)continue;st?g.lineTo(xi(i),yv(v)):g.moveTo(xi(i),yv(v));st=1}g.stroke();
   g.fillStyle='#d1d4dc';g.textAlign='left';g.font='11px -apple-system,sans-serif';g.textBaseline='top';g.fillText('Volume · MA20',4,P2.y0);
@@ -148,5 +309,76 @@ function draw(A){
   g.fillStyle='#d1d4dc';g.textBaseline='top';g.fillText('RSI 14 · '+(A.R[D.length-1]||0).toFixed(1),4,P3.y0);
   g.fillStyle='#787b86';g.textAlign='center';g.textBaseline='bottom';for(let i=off;i<D.length;i+=Math.ceil(N/5))g.fillText(kt(D[i].t),xi(i),H-1);
 }
-load();
+
+// ---------- results ----------
+let BT;
+async function loadResults(){
+  if(!LOG)await loadSignals();
+  if(BT===undefined){try{BT=await getJ('backtest.json?'+Date.now())}catch(e){BT=null}}
+  renderResults();
+}
+function renderResults(){
+  const s=LOG&&LOG.stats;
+  $('s-total').textContent=s?s.total:'—';
+  $('s-win').textContent=s&&s.winRate!=null?(s.winRate*100).toFixed(0)+'%':'—';
+  $('s-r').textContent=s?((s.sumR>=0?'+':'')+(+s.sumR).toFixed(1)):'—';
+  $('s-r').style.color=s&&s.sumR<0?'var(--dn)':s&&s.sumR>0?'var(--up)':'';
+  if(!LOG){$('log').innerHTML='<p class="empty">الخادم لا يرد حالياً.</p>'}
+  else if(!LOG.log||!LOG.log.length){$('log').innerHTML='<p class="empty">ما في إشارات بعد. أول ما تطلع إشارة تنسجّل هنا.</p>'}
+  else{const rows=[...LOG.log].reverse().slice(0,100).map(l=>{
+      const res=l.res==null?'<span style="color:var(--warn)">مفتوحة</span>':`<span style="color:${l.res>0?'var(--up)':'var(--dn)'}">${l.res>0?'+':''}${l.res}R</span>`;
+      return `<tr><td class="n">${ktd(l.t)}</td><td>${esc(l.sym)}</td><td style="color:${l.dir===1?'var(--up)':'var(--dn)'}">${l.dir===1?'صعود':'نزول'}</td><td class="n">${res}</td></tr>`}).join('');
+    $('log').innerHTML=`<table><thead><tr><th>الوقت (الكويت)</th><th>الرمز</th><th>الاتجاه</th><th style="text-align:end">النتيجة</th></tr></thead><tbody>${rows}</tbody></table>`}
+  renderBT();
+}
+const BTL={trades:'الصفقات',total:'الصفقات',n:'الصفقات',wins:'الرابحة',losses:'الخاسرة',winRate:'نسبة الإصابة',win_rate:'نسبة الإصابة',sumR:'مجموع R',sum_r:'مجموع R',totalR:'مجموع R',maxDD:'أكبر هبوط',max_dd:'أكبر هبوط',maxDrawdownR:'أكبر هبوط R',sym:'الرمز',symbol:'الرمز',from:'من',to:'إلى',tf:'المدة',bars:'الشموع',avgR:'متوسط R',profitFactor:'معامل الربح',profit_factor:'معامل الربح'};
+function btVal(k,v){if(typeof v==='number'){if(/rate/i.test(k)&&v<=1)return (v*100).toFixed(0)+'%';return Number.isInteger(v)?v:v.toFixed(2)}if(typeof v==='string'&&/^\d{4}-\d\d-\d\dT/.test(v))return v.slice(0,10);return esc(v)}
+function renderBT(){
+  if(!BT){$('bt').innerHTML='<p class="empty">ما في نتائج اختبار بعد. تظهر هنا أول ما تجهز.</p>';return}
+  let h='';const sum=BT.summary||BT.total||BT.overall||(typeof BT==='object'&&!Array.isArray(BT)?Object.fromEntries(Object.entries(BT).filter(([k,v])=>typeof v!=='object')):null);
+  if(sum&&typeof sum==='object'){const e=Object.entries(sum).filter(([k,v])=>typeof v!=='object');if(e.length)h+='<table><tbody>'+e.map(([k,v])=>`<tr><th>${esc(BTL[k]||k)}</th><td class="n">${btVal(k,v)}</td></tr>`).join('')+'</tbody></table>'}
+  let rows=Array.isArray(BT)?BT:(BT.symbols||BT.bySymbol||BT.per_symbol||BT.results||null);
+  if(rows&&!Array.isArray(rows)&&typeof rows==='object')rows=Object.entries(rows).map(([k,v])=>({sym:k,...v}));
+  if(Array.isArray(rows)&&rows.length&&typeof rows[0]==='object'){
+    const keys=Object.keys(rows[0]).filter(k=>typeof rows[0][k]!=='object').slice(0,5);
+    h+='<table style="margin-top:10px"><thead><tr>'+keys.map(k=>`<th>${esc(BTL[k]||k)}</th>`).join('')+'</tr></thead><tbody>'+rows.slice(0,60).map(r=>'<tr>'+keys.map((k,j)=>`<td${j?' class="n"':''}>${btVal(k,r[k])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
+  if(BT.note||BT.notes)h+=`<p class="note">${esc(BT.note||BT.notes)}</p>`;
+  $('bt').innerHTML=h||'<p class="empty">ملف الاختبار موجود لكن فاضي.</p>';
+}
+
+// ---------- push ----------
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let SWREG=null;
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then(r=>{SWREG=r;pushState()}).catch(()=>pushState());
+function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function pushState(){
+  const st=$('n-state'),on=$('n-on'),test=$('n-test');
+  $('ios').style.display=isIOS&&!standalone?'block':'none';
+  if(isIOS&&!standalone){st.textContent='التنبيهات تشتغل بعد إضافة البرنامج للشاشة الرئيسية.';on.style.display='none';test.style.display='none';return}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){st.textContent='هذا المتصفح ما يدعم التنبيهات. افتح الرابط في سفاري (آيفون) أو كروم (أندرويد).';on.style.display='none';test.style.display='none';return}
+  on.style.display='';let sub=null;try{const reg=SWREG||await navigator.serviceWorker.getRegistration();sub=reg&&await reg.pushManager.getSubscription()}catch(e){}
+  if(stopped){st.textContent='الإشارات موقوفة، فالتنبيهات موقوفة. شغّلها من صفحة السوق.';on.style.display='none';test.style.display='none';return}
+  if(Notification.permission==='denied'){st.textContent='التنبيهات مرفوضة من إعدادات الجهاز. فعّلها من الإعدادات ← الإشعارات ← التداول.';on.style.display='none';test.style.display='none';return}
+  if(sub){st.textContent='✅ التنبيهات مفعّلة على هذا الجهاز.';on.textContent='أعد التفعيل';test.style.display=''}
+  else{st.textContent='التنبيهات غير مفعّلة على هذا الجهاز.';on.textContent='فعّل التنبيهات';test.style.display='none'}
+}
+async function subscribe(silent){
+  const st=$('n-state');
+  try{
+    if(!silent){const p=await Notification.requestPermission();if(p!=='granted'){pushState();return}}
+    st.textContent='جاري التفعيل…';
+    const reg=SWREG||await navigator.serviceWorker.ready;const {key}=await getJ(RELAY+'/vapid');if(!key)throw new Error('no key');
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
+    const r=await fetch(RELAY+'/sub',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+    if(!r.ok)throw new Error(r.status);ls.set('pushWas','1');
+  }catch(e){if(!silent){st.textContent='ما قدرت أفعّل التنبيهات الحين (الخادم لا يرد). جرّب بعد شوي.';return}}
+  pushState();
+}
+$('n-on').onclick=()=>subscribe(false);
+$('n-test').onclick=async()=>{const st=$('n-state');try{const reg=SWREG||await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(!sub)return pushState();
+  const r=await fetch(RELAY+'/testpush',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})});st.textContent=r.ok?'أرسلت تنبيه تجربة، يوصلك خلال ثوانٍ.':'ما قدرت أرسل تنبيه التجربة.'}catch(e){st.textContent='ما قدرت أرسل تنبيه التجربة.'}};
+
+tick();
 </script></body></html>

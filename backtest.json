@@ -1,0 +1,5 @@
+{
+ "BTCUSDT": {"trades": 81, "wins": 32, "winRate": 0.3951, "sumR": 15, "maxDrawdownR": 12, "open": 1, "from": "2026-09-14T00:50:00Z", "to": "2026-11-13T00:50:00Z"},
+ "ETHUSDT": {"trades": 76, "wins": 28, "winRate": 0.3684, "sumR": 8, "maxDrawdownR": 14, "open": 0, "from": "2026-09-14T00:50:00Z", "to": "2026-11-13T00:50:00Z"},
+ "PAXGUSDT": {"trades": 72, "wins": 22, "winRate": 0.3056, "sumR": -6, "maxDrawdownR": 16, "open": 1, "from": "2026-09-14T00:50:00Z", "to": "2026-11-13T00:50:00Z"}
+}
