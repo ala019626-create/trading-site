@@ -21,6 +21,8 @@ button{cursor:pointer}
 #sym{max-width:46vw}
 .price{direction:ltr;font-weight:700;font-size:18px}
 .chg{direction:ltr;font-size:13px}
+.tfw{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.tfw button{background:none;border:0;color:var(--mute);padding:6px 10px;font:inherit;font-size:13px}.tfw button.on{background:var(--panel2);color:var(--txt);font-weight:600}
+#cdown{font-size:12px;color:var(--mute);padding:4px 12px}
 .pxw{margin-inline-start:auto;display:flex;align-items:baseline;gap:6px;white-space:nowrap}
 .card{margin:10px 12px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
 .card h2{font-size:15px;margin-bottom:8px}
@@ -41,7 +43,7 @@ button{cursor:pointer}
 .pill.bad{background:#3a1d1d;border-color:#5a2a2a;color:#ff8a80}
 .pill.good{color:var(--up)}
 #wrap{position:relative;margin:0 6px}
-canvas{display:block;width:100%}
+canvas{display:block;width:100%;touch-action:pan-y}
 footer{font-size:12px;color:var(--mute);padding:8px 12px 18px;line-height:1.8}
 #kill.on{background:#5a2a2a;border-color:#ef5350;color:#fff}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0f121a;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
@@ -66,7 +68,7 @@ td.n{direction:ltr;text-align:end}
 <section class="page on" id="p-market">
 <header>
   <select id="sym" aria-label="الأداة"></select>
-  <select id="tf" aria-label="مدة الشمعة"><option value="1m">دقيقة</option><option value="5m" selected>5 دقائق</option><option value="15m">15 دقيقة</option><option value="1h">ساعة</option></select>
+  <span class="tfw" id="tf"><button data-tf="1m">دقيقة</button><button data-tf="5m">5 دقائق</button></span>
   <span class="pxw"><span class="price" id="px">—</span><span class="chg" id="chg"></span></span>
 </header>
 <div class="daybar" id="day"></div>
@@ -89,6 +91,7 @@ td.n{direction:ltr;text-align:end}
   </div>
 </div>
 <div id="wrap"><canvas id="cv"></canvas></div>
+<div id="cdown"></div>
 <footer id="foot"></footer>
 </section>
 
@@ -129,7 +132,7 @@ const STALE=90;
 const $=id=>document.getElementById(id);
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-let ST=null,stAt=0,LOG=null,D=[],cur=ls.get('sym')||'',tf='5m',dec=2,lastBars=0,stopped=ls.get('kill')==='1',busy=false;
+let ST=null,stAt=0,LOG=null,D=[],cur=ls.get('sym')||'',tf=ls.get('tf')==='1m'?'1m':'5m',HOV=null,noOne=false,dec=2,lastBars=0,stopped=ls.get('kill')==='1',busy=false;
 const isBin=s=>s.startsWith('bin:');
 const fmt=x=>x==null||isNaN(x)?'—':Number(x).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 const kt=t=>new Date(t+3*3600e3).toISOString().slice(11,16);
@@ -145,7 +148,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 
 // ---------- kill switch ----------
 function setKill(){$('kill').classList.toggle('on',stopped);$('kill').textContent=stopped?'موقوفة · تشغيل':'إيقاف الإشارات'}
-$('kill').onclick=async()=>{stopped=!stopped;ls.set('kill',stopped?'1':'0');setKill();render();
+$('kill').onclick=async()=>{stopped=!stopped;ls.set('kill',stopped?'1':'0');setKill();render();renderDay();
   try{const reg=await navigator.serviceWorker?.getRegistration();const sub=await reg?.pushManager.getSubscription();
     if(stopped&&sub){ls.set('pushWas','1');await sub.unsubscribe()}
     else if(!stopped&&ls.get('pushWas')==='1'&&Notification.permission==='granted'){await subscribe(true)}}catch(e){}
@@ -161,11 +164,16 @@ function buildSel(){
     groups[c].sort().forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;g.appendChild(o)});sel.appendChild(g)});
   const g=document.createElement('optgroup');g.label='احتياط: Binance';
   BINSYMS.forEach(s=>{const o=document.createElement('option');o.value='bin:'+s[0];o.textContent=s[1];g.appendChild(o)});sel.appendChild(g);
-  const all=[...sel.options].map(o=>o.value);cur=all.includes(keep)?keep:all[0];sel.value=cur;onSym();
+  const all=[...sel.options].map(o=>o.value),saved=ls.get('sym');const prev=cur;
+  cur=saved&&all.includes(saved)?saved:(all.includes(keep)&&!(isBin(keep)&&!saved&&!isBin(all[0]))?keep:all[0]);sel.value=cur;onSym();if(prev&&prev!==cur){D=[];setTimeout(loadBars,0)}
 }
 $('sym').onchange=e=>{cur=e.target.value;ls.set('sym',cur);D=[];onSym();loadBars()};
-$('tf').onchange=e=>{tf=e.target.value;D=[];loadBars()};
-function onSym(){$('tf').style.display=isBin(cur)?'':'none'}
+function setTf(){document.querySelectorAll('#tf button').forEach(b=>b.classList.toggle('on',b.dataset.tf===tf))}
+document.querySelectorAll('#tf button').forEach(b=>b.onclick=()=>{if(tf===b.dataset.tf)return;tf=b.dataset.tf;ls.set('tf',tf);setTf();D=[];HOV=null;loadBars()});setTf();
+function onSym(){HOV=null}
+const TFMS=()=>tf==='1m'&&!noOne?60e3:300e3;
+setInterval(()=>{const e=$('cdown');if(!e)return;if(!D.length){e.textContent='';return}const L=D[D.length-1],end=L.t+TFMS(),left=Math.max(0,end-Date.now());
+  e.textContent=`آخر شمعة فتحت ${kt(L.t)} · تقفل ${kt(end)} (بعد ${Math.floor(left/60e3)}:${String(Math.floor(left/1e3)%60).padStart(2,'0')})${noOne?' · شموع الدقيقة لأسعار أكسنس ما وصلت بعد، المعروض 5 دقائق':''}`},1e3);
 
 // ---------- data ----------
 async function loadState(){try{ST=await getJ(RELAY+'/state');stAt=Date.now()}catch(e){}buildSel();renderDay()}
@@ -174,11 +182,12 @@ async function loadBars(){
   const s=cur;if(!s)return;
   try{
     if(isBin(s)){const b=BINSYMS.find(x=>'bin:'+x[0]===s);dec=b[2];
-      const r=await getJ(`${BIN}?symbol=${b[0]}&interval=${tf}&limit=150`);if(s!==cur)return;
+      const r=await getJ(`${BIN}?symbol=${b[0]}&interval=${tf}&limit=150`);if(s!==cur)return;noOne=false;
       D=r.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));lastBars=Date.now()}
     else{const r=await getJ(RELAY+'/bars?sym='+encodeURIComponent(s));if(s!==cur)return;
       dec=r.digits!=null?r.digits:(ST?.syms[s]?.digits??2);
-      D=(r.bars||[]).map(b=>({t:b[0],o:+b[1],h:+b[2],l:+b[3],c:+b[4],v:+b[5]}));lastBars=Date.now()}
+      const one=tf==='1m'&&r.bars1&&r.bars1.length;noOne=tf==='1m'&&!one;
+      D=((one?r.bars1:r.bars)||[]).map(b=>({t:b[0],o:+b[1],h:+b[2],l:+b[3],c:+b[4],v:+b[5]}));lastBars=Date.now()}
   }catch(e){}
   render();
 }
@@ -204,7 +213,7 @@ function renderDay(){
   if(d.cooldownUntil>Date.now())p.push(`<span class="pill bad">انتظار حتى ${kt(d.cooldownUntil)}</span>`);
   if(x.stopped)p.push('<span class="pill bad">التجربة متوقفة: المبلغ وصل حد التوقف</span>');
   else if(x.ratio!=null)p.push(`<span class="pill">الحساب <bdi>${(x.ratio*100).toFixed(0)}%</bdi> من البداية</span>`);
-  if(!d.locked&&!d.full&&!x.stopped&&!(d.cooldownUntil>Date.now()))p.push('<span class="pill good">مسموح</span>');
+  if(!stopped&&!isStale()&&!d.locked&&!d.full&&!x.stopped&&!(d.cooldownUntil>Date.now()))p.push('<span class="pill good">مسموح</span>');
   el.innerHTML=p.join('');
 }
 
@@ -275,7 +284,7 @@ function render(){
 }
 function foot(){
   const src=isBin(cur)?'Binance (احتياط)':'أكسنس عبر الخادم',t=isBin(cur)?lastBars:(ST&&ST.feedAge!=null?Date.now()-ST.feedAge*1e3:0);
-  $('foot').innerHTML=`المصدر: ${src} · آخر سعر ${t?kt(t):'—'} بتوقيت الكويت${isBin(cur)?' · شموع '+$('tf').selectedOptions[0].text:''}<br>نسبة احتمال لا ضمان، والقرار لك.`;
+  $('foot').innerHTML=`المصدر: ${src} · آخر سعر ${t?kt(t):'—'} بتوقيت الكويت${' · شموع '+(tf==='1m'&&!noOne?'دقيقة':'5 دقائق')}<br>نسبة احتمال لا ضمان، والقرار لك.`;
 }
 function clearCv(){const cv=$('cv');cv.height=0;cv.style.height='0'}
 
@@ -308,7 +317,14 @@ function draw(A){
   g.strokeStyle='#7e57c2';g.lineWidth=1.5;g.beginPath();st=0;for(let i=off;i<D.length;i++){const r=A.R[i];if(r==null)continue;st?g.lineTo(xi(i),yr(r)):g.moveTo(xi(i),yr(r));st=1}g.stroke();g.lineWidth=1;
   g.fillStyle='#d1d4dc';g.textBaseline='top';g.fillText('RSI 14 · '+(A.R[D.length-1]||0).toFixed(1),4,P3.y0);
   g.fillStyle='#787b86';g.textAlign='center';g.textBaseline='bottom';for(let i=off;i<D.length;i+=Math.ceil(N/5))g.fillText(kt(D[i].t),xi(i),H-1);
+  GEO={off,step,X1,H};
+  if(HOV!=null&&HOV>=off&&HOV<D.length){const d=D[HOV],x=Math.round(xi(HOV))+.5;g.setLineDash([3,3]);g.strokeStyle='#9598a1';g.beginPath();g.moveTo(x,0);g.lineTo(x,H-14);g.stroke();g.setLineDash([]);
+    const lab=ktd(d.t);g.font='600 11px -apple-system,sans-serif';const w=g.measureText(lab).width+12,bx=Math.min(Math.max(x-w/2,0),X1-w);g.fillStyle='#363a45';g.fillRect(bx,H-16,w,16);g.fillStyle='#fff';g.textBaseline='middle';g.textAlign='center';g.fillText(lab,bx+w/2,H-8);
+    const info=`فتح ${fmt(d.o)}  أعلى ${fmt(d.h)}  أدنى ${fmt(d.l)}  إغلاق ${fmt(d.c)}`;g.font='11px -apple-system,sans-serif';const iw=g.measureText(info).width+12;g.fillStyle='rgba(19,23,34,.9)';g.fillRect(4,4,iw,18);g.fillStyle='#d1d4dc';g.textAlign='left';g.fillText(info,10,13)}
 }
+let GEO=null;
+(()=>{const cv=document.getElementById('cv');const pick=e=>{if(!GEO||!D.length)return;const r=cv.getBoundingClientRect(),x=e.clientX-r.left;if(x>GEO.X1){HOV=null}else{HOV=Math.min(D.length-1,Math.max(GEO.off,Math.floor(x/GEO.step)+GEO.off))}render()};
+  cv.addEventListener('pointerdown',pick);cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.buttons)pick(e)});cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){HOV=null;render()}})})();
 
 // ---------- results ----------
 let BT;
@@ -332,7 +348,7 @@ function renderResults(){
   renderBT();
 }
 const BTL={trades:'الصفقات',total:'الصفقات',n:'الصفقات',wins:'الرابحة',losses:'الخاسرة',winRate:'نسبة الإصابة',win_rate:'نسبة الإصابة',sumR:'مجموع R',sum_r:'مجموع R',totalR:'مجموع R',maxDD:'أكبر هبوط',max_dd:'أكبر هبوط',maxDrawdownR:'أكبر هبوط R',sym:'الرمز',symbol:'الرمز',from:'من',to:'إلى',tf:'المدة',bars:'الشموع',avgR:'متوسط R',profitFactor:'معامل الربح',profit_factor:'معامل الربح'};
-function btVal(k,v){if(typeof v==='number'){if(/rate/i.test(k)&&v<=1)return (v*100).toFixed(0)+'%';return Number.isInteger(v)?v:v.toFixed(2)}if(typeof v==='string'&&/^\d{4}-\d\d-\d\dT/.test(v))return v.slice(0,10);return esc(v)}
+function btVal(k,v){if(typeof v==='number'){if(/rate/i.test(k)&&v<=1)return (v*100).toFixed(0)+'%';const t=Number.isInteger(v)?String(v):v.toFixed(2);return '<bdi dir="ltr">'+(/sumR|sum_r|totalR|avgR/.test(k)&&v>0?'+':'')+t.replace('-','−')+'</bdi>'}if(typeof v==='string'&&/^\d{4}-\d\d-\d\dT/.test(v))return v.slice(0,10);return esc(v)}
 function renderBT(){
   if(!BT){$('bt').innerHTML='<p class="empty">ما في نتائج اختبار بعد. تظهر هنا أول ما تجهز.</p>';return}
   let h='';const sum=BT.summary||BT.total||BT.overall||(typeof BT==='object'&&!Array.isArray(BT)?Object.fromEntries(Object.entries(BT).filter(([k,v])=>typeof v!=='object')):null);
