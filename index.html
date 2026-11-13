@@ -337,7 +337,7 @@ function renderBT(){
   if(!BT){$('bt').innerHTML='<p class="empty">ما في نتائج اختبار بعد. تظهر هنا أول ما تجهز.</p>';return}
   let h='';const sum=BT.summary||BT.total||BT.overall||(typeof BT==='object'&&!Array.isArray(BT)?Object.fromEntries(Object.entries(BT).filter(([k,v])=>typeof v!=='object')):null);
   if(sum&&typeof sum==='object'){const e=Object.entries(sum).filter(([k,v])=>typeof v!=='object');if(e.length)h+='<table><tbody>'+e.map(([k,v])=>`<tr><th>${esc(BTL[k]||k)}</th><td class="n">${btVal(k,v)}</td></tr>`).join('')+'</tbody></table>'}
-  let rows=Array.isArray(BT)?BT:(BT.symbols||BT.bySymbol||BT.per_symbol||BT.results||null);
+  let rows=Array.isArray(BT)?BT:(BT.symbols||BT.bySymbol||BT.per_symbol||BT.results||null);if(!rows&&BT&&typeof BT==='object'){const ent=Object.entries(BT).filter(([k,v])=>v&&typeof v==='object');if(ent.length)rows=ent.map(([k,v])=>({sym:k,...v}))}
   if(rows&&!Array.isArray(rows)&&typeof rows==='object')rows=Object.entries(rows).map(([k,v])=>({sym:k,...v}));
   if(Array.isArray(rows)&&rows.length&&typeof rows[0]==='object'){
     const keys=Object.keys(rows[0]).filter(k=>typeof rows[0][k]!=='object').slice(0,5);
